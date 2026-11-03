@@ -1,6 +1,6 @@
-# cc3x3 for iTerm2: split this iTerm window into a grid of Claude Code sessions, 3 per project folder.
+# cc-iterm: split this iTerm window into a grid of Claude Code sessions, 3 per project folder.
 #
-# Source this from ~/.zshrc (install.sh does it):  source "/path/to/cc3x3-iterm/cc.zsh"
+# Source this from ~/.zshrc (install.sh does it):  source "/path/to/cc-iterm/cc.zsh"
 #
 #   cc jobi                    3 panes running Claude in jobi
 #   cc jobi upskill            6 panes: a row of 3 per folder

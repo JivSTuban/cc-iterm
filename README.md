@@ -1,4 +1,4 @@
-# cc3x3 for iTerm2
+# cc-iterm
 
 One command splits an iTerm2 window into a 3x3 grid of Claude Code sessions, one row of three per project folder.
 The iTerm toolbelt lists every session and whether it is working or idle.
@@ -20,16 +20,16 @@ macOS and iTerm2 only. Terminal.app cannot split panes from a script, so it is n
 Open Claude Code in any folder and paste this. It installs everything and tells you the one setting it cannot click for you.
 
 ```text
-Set up cc3x3-iterm on this Mac so that typing `cc <folder> <folder> <folder>` in iTerm2 opens a 3x3 grid of Claude Code sessions.
+Set up cc-iterm on this Mac so that typing `cc <folder> <folder> <folder>` in iTerm2 opens a 3x3 grid of Claude Code sessions.
 
 1. Check this is macOS and that /Applications/iTerm.app exists. If iTerm2 is missing, tell me to run `brew install --cask iterm2`, then stop.
-2. Clone https://github.com/JivSTuban/cc3x3-iterm into ~/cc3x3-iterm. If the folder already exists, run `git pull` in it instead.
-3. Run `sh ~/cc3x3-iterm/install.sh`. It creates a Python venv (3.10 or newer), installs fzf, and adds one `source` line to ~/.zshrc.
+2. Clone https://github.com/JivSTuban/cc-iterm into ~/cc-iterm. If the folder already exists, run `git pull` in it instead.
+3. Run `sh ~/cc-iterm/install.sh`. It creates a Python venv (3.10 or newer), installs fzf, and adds one `source` line to ~/.zshrc.
 4. Run `defaults read com.googlecode.iterm2 EnableAPIServer`. If it does not print 1, tell me to open iTerm2 > Settings > General > Magic, tick "Enable Python API", and restart iTerm2.
-5. Run `~/cc3x3-iterm/.venv/bin/python -m unittest discover -s ~/cc3x3-iterm/tests` and show me the result.
+5. Run `~/cc-iterm/.venv/bin/python -m unittest discover -s ~/cc-iterm/tests` and show me the result.
 6. Tell me to open a NEW iTerm2 window and run `cc <one of my project folders>`. Do not run it from this session.
 
-Show each command before you run it. Stop at the first error and show me the exact output. Do not change anything except ~/cc3x3-iterm and the one line in ~/.zshrc.
+Show each command before you run it. Stop at the first error and show me the exact output. Do not change anything except ~/cc-iterm and the one line in ~/.zshrc.
 ```
 
 ## Use it
@@ -56,7 +56,7 @@ The picker lists every folder with `.git` or `CLAUDE.md` under `CC_ROOTS` (3 lev
 ## Manual setup
 
 ```sh
-git clone https://github.com/JivSTuban/cc3x3-iterm ~/cc3x3-iterm && sh ~/cc3x3-iterm/install.sh
+git clone https://github.com/JivSTuban/cc-iterm ~/cc-iterm && sh ~/cc-iterm/install.sh
 ```
 
 Needs iTerm2 3.x with **Settings > General > Magic > Enable Python API** on, Python 3.10+ (the installer finds or installs
