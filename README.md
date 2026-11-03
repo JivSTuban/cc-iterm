@@ -43,6 +43,7 @@ Set in `~/.zshrc` before the `source` line.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
+| `CC_TOOLBELT` | `1` | `cc 3x3` shows the iTerm toolbelt (Profiles, Session Status) if it is hidden, so you see each Claude pane's state. `0` leaves it alone. |
 | `CC_ROOTS` | `(~/Desktop)` | Folders searched for projects. A zsh array: `CC_ROOTS=(~/Desktop ~/work)`. |
 | `CC_LAUNCH` | `claude` | Command each `cc` window runs. Use `claude --dangerously-skip-permissions` for unattended agents. |
 | `CC_WIDTH3` | `0.92` | Fraction of the screen the 3-column grids span; the rest is side strips for a browser. 2x2 always uses the full width. |

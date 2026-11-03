@@ -17,7 +17,7 @@
 : ${CC_LAUNCH:=claude}
 # Where your projects live. A project is a folder with .git or CLAUDE.md, up to 3 levels down.
 (( ${#CC_ROOTS} )) || CC_ROOTS=(~/Desktop)
-# Also read by cc3x3.py: CC_WIDTH3 (3-column grid width fraction, 0.92), CC_FONT_LAPTOP (10), CC_FONT_DESKTOP (12).
+# Also read by cc3x3.py: CC_TOOLBELT (1), CC_WIDTH3 (3-column grid width fraction, 0.92), CC_FONT_LAPTOP (10), CC_FONT_DESKTOP (12).
 # --------------------------------------------------------------------------------------------------
 
 _CC3X3_DIR="${${(%):-%x}:A:h}"

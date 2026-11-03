@@ -36,6 +36,10 @@ FONT = {"laptop": float(os.environ.get("CC_FONT_LAPTOP", "10")),
         "desktop": float(os.environ.get("CC_FONT_DESKTOP", "12"))}
 # ----------------------------------------------------------------------------------------------------
 
+# `cc 3x3` turns on View > Show Toolbelt (your Profiles and Session Status panels) when it is off, so every
+# Claude pane's state is visible. Set CC_TOOLBELT=0 to leave the window alone. It never turns the toolbelt off.
+TOOLBELT = os.environ.get("CC_TOOLBELT", "1") != "0"
+
 PROFILE_NAME = "cc3x3"
 # Fixed on purpose: iTerm tracks a dynamic profile by Guid, so rewriting the file updates it in place.
 PROFILE_GUID = "6f1f1d0e-3c3b-4c1e-9d55-cc3300000001"
@@ -253,6 +257,15 @@ async def even_out(tab, rows):
     await tab.async_update_layout()
 
 
+async def show_toolbelt(conn):
+    try:
+        if not (await iterm2.MainMenu.async_get_menu_item_state(conn, "Show Toolbelt")).checked:
+            await iterm2.MainMenu.async_select_menu_item(conn, "Show Toolbelt")
+            await asyncio.sleep(0.5)  # the window resizes its content; wait before reading pane sizes
+    except iterm2.MenuItemException:
+        pass  # no key window to act on; the panes still work
+
+
 async def cmd_panes(conn, app, args):
     """`cc 3x3`: split THIS window into panes. One row of 3 sessions per folder, all running CMD there."""
     win, tab, session = await find_self_tab(app)
@@ -270,6 +283,8 @@ async def cmd_panes(conn, app, args):
     own = len(tab.sessions) == 1
     if not own:
         tab = await win.async_create_tab(profile=profile)
+    if TOOLBELT:
+        await show_toolbelt(conn)  # before the splits: it narrows the window, and even_out reads the final sizes
     rows = [[tab.current_session if not own else session]]
     for _ in args.open[1:]:
         rows.append([await rows[-1][0].async_split_pane(vertical=False, profile=profile)])
