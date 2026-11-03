@@ -82,15 +82,6 @@ def pane_plan(dirs):
     return [d for d in dirs for _ in range(PANE_COLS)]
 
 
-def even_sizes(total, n):
-    """Split `total` character cells into `n` panes with a 1-cell divider between each, as evenly as
-    possible (the last pane takes the remainder). iTerm halves the pane it splits, so three splits come
-    out 50/25/25 until the sizes are set explicitly."""
-    avail = total - (n - 1)
-    base = avail // n
-    return [base] * (n - 1) + [avail - base * (n - 1)]
-
-
 def reading_order(work, windows):
     """Sort (key, Rect) pairs by screen third (top to bottom), then left to right.
 

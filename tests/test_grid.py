@@ -1,6 +1,6 @@
 import os, sys, unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from grid import Grid, Rect, detect_layout, even_sizes, free_cell, pane_plan, reading_order
+from grid import Grid, Rect, detect_layout, free_cell, pane_plan, reading_order
 
 WORK = Rect(0, 65, 1470, 858)  # this MacBook's visibleFrame: Dock at the bottom, menu bar hidden
 
@@ -70,13 +70,6 @@ class GridTests(unittest.TestCase):
         for bad in ([], ["a", "b", "c", "d"]):
             with self.assertRaises(ValueError):
                 pane_plan(bad)
-
-    def test_even_sizes_fill_the_width_including_dividers(self):
-        for total in (60, 61, 62, 200, 237):
-            for n in (1, 2, 3):
-                s = even_sizes(total, n)
-                self.assertEqual(sum(s) + (n - 1), total)
-                self.assertLessEqual(max(s) - min(s), n)  # the remainder lands on the last pane only
 
 
 if __name__ == "__main__":

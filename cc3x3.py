@@ -24,7 +24,7 @@ from pathlib import Path
 
 import iterm2
 
-from grid import (LAYOUTS, PANE_COLS, Grid, Rect, detect_layout, even_sizes, free_cell, pane_plan,
+from grid import (LAYOUTS, PANE_COLS, Grid, Rect, detect_layout, free_cell, pane_plan,
                   reading_order)
 
 # --- config: override with env vars in ~/.zshrc before sourcing cc.zsh ------------------------------
@@ -246,18 +246,6 @@ async def find_self_tab(app):
     return None, None, None
 
 
-async def even_out(tab, rows):
-    """Give every pane in `rows` (a list of rows of sessions) the same share of the tab. Splitting halves
-    the pane being split, so without this three panes come out 50/25/25."""
-    width = sum(s.grid_size.width for s in rows[0]) + (len(rows[0]) - 1)
-    height = sum(r[0].grid_size.height for r in rows) + (len(rows) - 1)
-    widths, heights = even_sizes(width, len(rows[0])), even_sizes(height, len(rows))
-    for r, row in enumerate(rows):
-        for c, s in enumerate(row):
-            s.preferred_size = iterm2.Size(widths[c], heights[r])
-    await tab.async_update_layout()
-
-
 async def show_toolbelt(conn):
     try:
         if not (await iterm2.MainMenu.async_get_menu_item_state(conn, "Show Toolbelt")).checked:
@@ -289,14 +277,13 @@ async def cmd_panes(conn, app, args):
     if not own:
         tab = await win.async_create_tab(profile=profile)
     if TOOLBELT:
-        await show_toolbelt(conn)  # before the splits: it narrows the window, and even_out reads the final sizes
+        await show_toolbelt(conn)  # before the splits, because it narrows the window
     rows = [[tab.current_session if not own else session]]
     for _ in args.open[1:]:
         rows.append([await rows[-1][0].async_split_pane(vertical=False, profile=profile)])
     for row in rows:
         for _ in range(PANE_COLS - 1):
             row.append(await row[-1].async_split_pane(vertical=True, profile=profile))
-    await even_out(tab, rows)
     for i, d in enumerate(plan):
         s = rows[i // PANE_COLS][i % PANE_COLS]
         if own and i == 0:
