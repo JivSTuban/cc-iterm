@@ -25,9 +25,9 @@ command -v fzf >/dev/null || { need_brew fzf; echo "Installing fzf (project pick
 
 line="source \"$here/cc.zsh\""
 if grep -qF "$here/cc.zsh" ~/.zshrc 2>/dev/null; then
-  echo "cc3x3 already sourced in ~/.zshrc"
+  echo "cc-iterm already sourced in ~/.zshrc"
 else
-  printf '\n# cc3x3 (iTerm2 grid launcher)\n%s\n' "$line" >> ~/.zshrc
+  printf '\n# cc-iterm (Claude Code grid launcher)\n%s\n' "$line" >> ~/.zshrc
   echo "Added to ~/.zshrc: $line"
 fi
 
