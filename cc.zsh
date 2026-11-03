@@ -1,7 +1,12 @@
-# cc3x3 for iTerm2: tile iTerm windows into a screen grid and launch Claude Code in each.
+# cc3x3 for iTerm2: open a grid of iTerm windows, one per project, and launch Claude Code in each.
 #
 # Source this from ~/.zshrc (install.sh does it):  source "/path/to/cc3x3-iterm/cc.zsh"
-# Then in any iTerm2 window type `cc` to snap it into a free grid cell and start Claude.
+#
+#   cc 3x3                 pick projects in a fuzzy list (Tab selects several), one tiled window each
+#   cc 3x3 jobi studio     same, but name the projects (folder name under CC_ROOTS, or a path)
+#   cc                     tile THIS window; Claude starts here if this is a project, else you pick one
+#   cc 3x2 | 2x2           other layouts;  cc z-2 | z0 | z2  sets the font zoom (alone: only zooms)
+#   cc 3x3 jobi -- --model opus     anything from the first -flag on goes to Claude
 #
 # Note: this shadows /usr/bin/cc (the C compiler) in interactive shells only. Scripts and make
 # are not affected. Use `command cc` or /usr/bin/cc to reach the compiler.
@@ -9,27 +14,70 @@
 # --- config: set any of these in ~/.zshrc BEFORE the source line ---------------------------------
 # What each cc window runs. Add --dangerously-skip-permissions here for unattended agents.
 : ${CC_LAUNCH:=claude}
+# Where your projects live. A project is a folder with .git or CLAUDE.md, up to 3 levels down.
+(( ${#CC_ROOTS} )) || CC_ROOTS=(~/Desktop)
 # Also read by cc3x3.py: CC_WIDTH3 (3-column grid width fraction, 0.92), CC_FONT_LAPTOP (10), CC_FONT_DESKTOP (12).
 # --------------------------------------------------------------------------------------------------
 
 _CC3X3_DIR="${${(%):-%x}:A:h}"
 _cc3x3() { "$_CC3X3_DIR/.venv/bin/python" "$_CC3X3_DIR/cc3x3.py" "$@" }
 
-# cc              tile into the layout on screen and launch
-# cc 3x3|3x2|2x2  move every iTerm window into that layout first, then tile and launch
-# cc z-2|z0|z2    set the zoom (machine default +/- N); `cc z-2` alone only zooms, no launch
-# Trailing arguments pass through to $CC_LAUNCH, e.g. `cc 3x3 --model opus`.
+# Project folders under CC_ROOTS, most recent git activity first, one per line (tab: mtime, path).
+_cc3x3_projects() {
+  local m f
+  find "${CC_ROOTS[@]}" -maxdepth 3 \( -name node_modules -o -name .venv \) -prune -o \
+       \( -name .git -o -name CLAUDE.md \) -print 2>/dev/null |
+  while IFS= read -r m; do
+    f=$m; [[ -e $m/index ]] && f=$m/index   # .git/index changes on every commit or add
+    printf '%s\t%s\n' "$(stat -f %m "$f")" "${m:h}"
+  done | sort -t$'\t' -k1,1nr | awk -F'\t' '!seen[$2]++ { print $2 }'
+}
+
+# Turns a name or path into an absolute project folder; prints nothing when there is no match.
+_cc3x3_resolve() {
+  [[ -d $1 ]] && { print -r -- ${1:A}; return }
+  local p; for p in ${(f)"$(_cc3x3_projects)"}; do [[ ${p:t} == $1 ]] && { print -r -- $p; return }; done
+}
+
 cc() {
-  local -a a=("$@") opts=()
+  local -a a=("$@") opts=() dirs=() pick
+  local layout="" limit=9 sel
+
   if [[ ${a[1]} =~ '^z(-?[0-9]+)$' ]]; then
-    opts+=(--zoom ${match[1]}); a=("${(@)a[2,-1]}")
-    (( $#a )) || { _cc3x3 zoom ${match[1]}; return }
+    local z=${match[1]}; opts+=(--zoom $z); a=("${(@)a[2,-1]}")
+    (( $#a )) || { _cc3x3 zoom $z; return }
   fi
-  if [[ ${a[1]} == (3x2|3x3|2x2) ]]; then opts+=(--layout ${a[1]}); a=("${(@)a[2,-1]}"); fi
-  _cc3x3 cc "${opts[@]}"
-  (( $? == 3 )) && return 1   # too many windows for the layout: nothing moved, do not launch
-  local -a launch=(${(z)CC_LAUNCH})
-  command "${launch[@]}" "${a[@]}"
+  if [[ ${a[1]} == (3x2|3x3|2x2) ]]; then
+    layout=${a[1]}; opts+=(--layout $layout); a=("${(@)a[2,-1]}")
+    limit=$(( ${layout[1]} * ${layout[3]} ))
+  fi
+
+  # Everything up to the first -flag is a project; the rest goes to Claude.
+  while (( $#a )) && [[ ${a[1]} != -* ]]; do
+    sel=$(_cc3x3_resolve ${a[1]})
+    [[ -n $sel ]] || { print -u2 "cc: no project named '${a[1]}' under ${CC_ROOTS[*]}"; return 1 }
+    dirs+=($sel); a=("${(@)a[2,-1]}")
+  done
+  [[ ${a[1]} == -- ]] && a=("${(@)a[2,-1]}")
+
+  if (( ! $#dirs )); then
+    if [[ -z $layout ]] && { git rev-parse --show-toplevel >/dev/null 2>&1 || [[ -f CLAUDE.md ]] }; then
+      dirs=($PWD)   # a bare `cc` inside a project: tile and launch right here
+    else
+      command -v fzf >/dev/null || { print -u2 "cc: the project picker needs fzf: brew install fzf"; return 1 }
+      local multi="--multi=$limit"; [[ -z $layout ]] && multi="--no-multi"
+      pick=$(_cc3x3_projects | sed "s|^$HOME|~|" |
+             fzf $multi --height=50% --reverse --prompt='project > ' \
+                 --header="${layout:+Tab selects up to $limit, }Enter opens, Esc cancels") || return 1
+      for sel in ${(f)pick}; do dirs+=(${sel/#\~/$HOME}); done
+      (( $#dirs )) || return 1
+    fi
+  fi
+
+  local cmdline="$CC_LAUNCH ${(j: :)${(q-)a[@]}}"
+  _cc3x3 cc "${opts[@]}" --cmd-line "$cmdline" --open "${dirs[@]}"
+  (( $? == 3 )) && return 1   # too many windows for the layout: nothing moved, nothing opened
+  cd "${dirs[1]}" && eval "$cmdline"
 }
 
 # ccgrid [3x3|3x2|2x2]  re-tile every iTerm window (defaults to the layout on screen)

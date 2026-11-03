@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """cc3x3 for iTerm2: tile iTerm windows into a screen grid. Called by the shell functions in cc.zsh.
 
-  cc3x3.py cc   [--layout 3x3|3x2|2x2] [--zoom N]   tile this window (after re-tiling the rest if --layout)
+  cc3x3.py cc   [--layout 3x3|3x2|2x2] [--zoom N] [--open DIR...] [--cmd-line CMD]
+                                                     tile this window (after re-tiling the rest if --layout);
+                                                     --open also creates one window per extra DIR running CMD there
   cc3x3.py grid [LAYOUT]                             re-tile every window on this screen
   cc3x3.py zoom N                                    set the base font size to machine default + N
 
@@ -13,6 +15,7 @@ import argparse
 import asyncio
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -191,25 +194,50 @@ async def cmd_cc(conn, app, args):
     screen = screen_of(screens, me)
     work = screen[1]
     others = on_screen(screen, await tiled_windows(app, screens, onscreen, win.window_id))
+    new_window = await new_window_factory(conn)
+    spawn = len(args.open)  # extra windows to create; this window takes the first project
     if args.layout:
         layout = args.layout
-        cols, rows = LAYOUTS[layout]
-        extra = len(others) + 1 - cols * rows  # +1 keeps a cell for this window
-        if extra > 0:
-            print(f"cc: too many terminals for {layout}, close {extra} first")
-            return 3
         grid = grid_for(layout, work)
+        full = len(others) + 1 + max(0, spawn - 1)  # +1 keeps a cell for this window
+        if full > grid.cols * grid.rows:
+            print(f"cc: too many terminals for {layout}, close {full - grid.cols * grid.rows} first")
+            return 3
         await relayout(grid, work, others)
         others = [(w, grid.frame(i)) for i, (w, _) in enumerate(reading_order(work, others))]
     else:
         layout = detect_layout(work, [r for _, r in others])
         grid = grid_for(layout, work)
-    cell = free_cell(grid, me, [r for _, r in others])
+        free = grid.cols * grid.rows - len(others) - 1
+        if spawn > 1 and spawn - 1 > free:
+            print(f"cc: only {max(free, 0) + 1} cells left in {layout}, pick fewer or close some first")
+            return 3
+    taken = [r for _, r in others]
+    # Spawning a set of projects fills the grid in reading order; a lone `cc` keeps the cell it sits in.
+    cell = grid.first_free(taken) if spawn else free_cell(grid, me, taken)
     if cell < 0:
         print("cc: grid full, window left where it is")
     else:
         await win.async_set_frame(to_frame(grid.frame(cell)))
+        taken.append(grid.frame(cell))
+    for d in args.open[1:]:
+        cell = grid.first_free(taken)
+        new = await new_window()
+        await new.async_set_frame(to_frame(grid.frame(cell)))
+        taken.append(grid.frame(cell))
+        await new.current_tab.current_session.async_send_text(f"cd {shlex.quote(d)} && {args.cmd_line}\n")
     return 0
+
+
+async def new_window_factory(conn):
+    """A new iTerm window using the cc3x3 profile when a zoom was set, else your default profile."""
+    async def new_window():
+        try:
+            w = await iterm2.Window.async_create(conn, profile=PROFILE_NAME if PROFILE_FILE.exists() else None)
+        except Exception:
+            w = None
+        return w or await iterm2.Window.async_create(conn)
+    return new_window
 
 
 async def cmd_grid(conn, app, args):
@@ -243,6 +271,9 @@ def main():
     c = sub.add_parser("cc")
     c.add_argument("--layout", choices=LAYOUTS)
     c.add_argument("--zoom", type=int)
+    c.add_argument("--open", nargs="*", default=[], metavar="DIR",
+                   help="project folders: the first runs in this window, the rest in new windows")
+    c.add_argument("--cmd-line", default="claude", help="shell command to run in each new window")
     g = sub.add_parser("grid")
     g.add_argument("layout", nargs="?", choices=LAYOUTS)
     z = sub.add_parser("zoom")

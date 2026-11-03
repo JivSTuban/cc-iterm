@@ -45,6 +45,11 @@ class Grid:
             return -1
         return int(dy // self.h) * self.cols + int(dx // self.w)
 
+    def first_free(self, taken):
+        """First cell in reading order not under any rect in `taken`, or -1 when full."""
+        used = {self.cell_of(r) for r in taken}
+        return next((c for c in range(self.cols * self.rows) if c not in used), -1)
+
     def frame(self, cell):
         col, row = cell % self.cols, cell // self.cols
         return Rect(self.x + col * self.w, self.top - (row + 1) * self.h, self.w, self.h)
@@ -59,10 +64,9 @@ def detect_layout(work, others):
 
 def free_cell(grid, self_frame, others):
     """Keep `self_frame` in the cell under its center when free, else the first free cell, else -1."""
-    taken = {grid.cell_of(o) for o in others}
     cell = grid.cell_of(self_frame)
-    if cell < 0 or cell in taken:
-        cell = next((c for c in range(grid.cols * grid.rows) if c not in taken), -1)
+    if cell < 0 or cell in {grid.cell_of(o) for o in others}:
+        cell = grid.first_free(others)
     return cell
 
 

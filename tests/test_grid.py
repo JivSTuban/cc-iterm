@@ -48,6 +48,13 @@ class GridTests(unittest.TestCase):
         self.assertEqual(free_cell(g, g.frame(0), [g.frame(0)]), 1)
         self.assertEqual(free_cell(g, g.frame(0), [g.frame(i) for i in range(6)]), -1)
 
+    def test_first_free_fills_in_reading_order(self):
+        g = Grid(WORK, 3, 2, 0.92)
+        self.assertEqual(g.first_free([]), 0)
+        self.assertEqual(g.first_free([g.frame(0), g.frame(1)]), 2)
+        self.assertEqual(g.first_free([g.frame(0), g.frame(2)]), 1)  # fills the gap, not the end
+        self.assertEqual(g.first_free([g.frame(i) for i in range(6)]), -1)
+
     def test_reading_order_rows_then_columns(self):
         g = Grid(WORK, 3, 3, 0.92)
         shuffled = [(i, g.frame(i)) for i in (7, 2, 0, 5, 3, 8, 1, 6, 4)]

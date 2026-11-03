@@ -6,6 +6,8 @@ py=$(command -v /opt/homebrew/bin/python3 || command -v python3)
 "$py" -m venv "$here/.venv"
 "$here/.venv/bin/pip" install -q -r "$here/requirements.txt"
 
+command -v fzf >/dev/null || { echo "Installing fzf (project picker)"; brew install fzf; }
+
 line="source \"$here/cc.zsh\""
 if grep -qF "$here/cc.zsh" ~/.zshrc 2>/dev/null; then
   echo "cc3x3 already sourced in ~/.zshrc"
