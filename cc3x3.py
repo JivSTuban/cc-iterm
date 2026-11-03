@@ -4,10 +4,11 @@
   cc3x3.py cc   [--layout 3x3|3x2|2x2] [--zoom N] [--open DIR...] [--cmd-line CMD]
                                                      tile this window (after re-tiling the rest if --layout);
                                                      --open also creates one window per extra DIR running CMD there
+  cc3x3.py panes --open DIR... [--cmd-line CMD]      split THIS window into 3 panes per DIR (1 to 3 DIRs), running CMD in each
   cc3x3.py grid [LAYOUT]                             re-tile every window on this screen
   cc3x3.py zoom N                                    set the base font size to machine default + N
 
-Exit codes: 0 ok, 2 setup problem, 3 stop (nothing moved, do not launch).
+Exit codes: 0 ok, 2 setup problem, 3 stop (nothing moved, do not launch), 5 panes made in a new tab (do not launch here).
 Uses iTerm's Python API for windows and fonts. AppleScript is deprecated by iTerm2, so it is not used;
 the only osascript call reads screen geometry from AppKit/CoreGraphics (no permission prompt).
 """
@@ -23,7 +24,8 @@ from pathlib import Path
 
 import iterm2
 
-from grid import LAYOUTS, Grid, Rect, detect_layout, free_cell, reading_order
+from grid import (LAYOUTS, PANE_COLS, Grid, Rect, detect_layout, even_sizes, free_cell, pane_plan,
+                  reading_order)
 
 # --- config: override with env vars in ~/.zshrc before sourcing cc.zsh ------------------------------
 # 3-column grids span this fraction of the screen, centered, so strips stay free on both sides for a
@@ -229,6 +231,60 @@ async def cmd_cc(conn, app, args):
     return 0
 
 
+async def find_self_tab(app):
+    sid = os.environ.get("ITERM_SESSION_ID", "").split(":")[-1]
+    for w in app.terminal_windows:
+        for t in w.tabs:
+            for s in t.sessions:
+                if s.session_id == sid:
+                    return w, t, s
+    return None, None, None
+
+
+async def even_out(tab, rows):
+    """Give every pane in `rows` (a list of rows of sessions) the same share of the tab. Splitting halves
+    the pane being split, so without this three panes come out 50/25/25."""
+    width = sum(s.grid_size.width for s in rows[0]) + (len(rows[0]) - 1)
+    height = sum(r[0].grid_size.height for r in rows) + (len(rows) - 1)
+    widths, heights = even_sizes(width, len(rows[0])), even_sizes(height, len(rows))
+    for r, row in enumerate(rows):
+        for c, s in enumerate(row):
+            s.preferred_size = iterm2.Size(widths[c], heights[r])
+    await tab.async_update_layout()
+
+
+async def cmd_panes(conn, app, args):
+    """`cc 3x3`: split THIS window into panes. One row of 3 sessions per folder, all running CMD there."""
+    win, tab, session = await find_self_tab(app)
+    if not win:
+        print("cc: run this inside an iTerm2 window", file=sys.stderr)
+        return 2
+    try:
+        plan = pane_plan(args.open)
+    except ValueError as e:
+        print(f"cc: {e}", file=sys.stderr)
+        return 3
+    await adopt_profile(conn, session)  # keep a zoom set earlier
+    profile = (await session.async_get_profile()).name  # panes copy this window's profile, not the default
+    # A tab that already has splits keeps them: the grid goes in a new tab and this shell stays idle.
+    own = len(tab.sessions) == 1
+    if not own:
+        tab = await win.async_create_tab(profile=profile)
+    rows = [[tab.current_session if not own else session]]
+    for _ in args.open[1:]:
+        rows.append([await rows[-1][0].async_split_pane(vertical=False, profile=profile)])
+    for row in rows:
+        for _ in range(PANE_COLS - 1):
+            row.append(await row[-1].async_split_pane(vertical=True, profile=profile))
+    await even_out(tab, rows)
+    for i, d in enumerate(plan):
+        s = rows[i // PANE_COLS][i % PANE_COLS]
+        if own and i == 0:
+            continue  # the shell that ran `cc` starts this one itself, so exiting Claude leaves a prompt
+        await s.async_send_text(f"cd {shlex.quote(d)} && {args.cmd_line}\n")
+    return 0 if own else 5
+
+
 async def new_window_factory(conn):
     """A new iTerm window using the cc3x3 profile when a zoom was set, else your default profile."""
     async def new_window():
@@ -274,12 +330,15 @@ def main():
     c.add_argument("--open", nargs="*", default=[], metavar="DIR",
                    help="project folders: the first runs in this window, the rest in new windows")
     c.add_argument("--cmd-line", default="claude", help="shell command to run in each new window")
+    p = sub.add_parser("panes")
+    p.add_argument("--open", nargs="+", required=True, metavar="DIR", help="1 to 3 project folders, one row of 3 panes each")
+    p.add_argument("--cmd-line", default="claude", help="shell command to run in each pane")
     g = sub.add_parser("grid")
     g.add_argument("layout", nargs="?", choices=LAYOUTS)
     z = sub.add_parser("zoom")
     z.add_argument("delta", type=int)
     args = ap.parse_args()
-    run = {"cc": cmd_cc, "grid": cmd_grid, "zoom": cmd_zoom}[args.cmd]
+    run = {"cc": cmd_cc, "panes": cmd_panes, "grid": cmd_grid, "zoom": cmd_zoom}[args.cmd]
     code = []
 
     async def go(conn):

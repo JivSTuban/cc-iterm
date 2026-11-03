@@ -1,6 +1,6 @@
 import os, sys, unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from grid import Grid, Rect, detect_layout, free_cell, reading_order
+from grid import Grid, Rect, detect_layout, even_sizes, free_cell, pane_plan, reading_order
 
 WORK = Rect(0, 65, 1470, 858)  # this MacBook's visibleFrame: Dock at the bottom, menu bar hidden
 
@@ -62,6 +62,21 @@ class GridTests(unittest.TestCase):
         g2 = Grid(WORK, 3, 2, 0.92)  # a 3x2 wall re-tiled to 3x3 keeps its rows
         wall = [(i, g2.frame(i)) for i in range(6)]
         self.assertEqual([k for k, _ in reading_order(WORK, wall)], list(range(6)))
+
+    def test_pane_plan_is_one_row_of_three_per_folder(self):
+        self.assertEqual(pane_plan(["a"]), ["a"] * 3)
+        self.assertEqual(pane_plan(["a", "b"]), ["a"] * 3 + ["b"] * 3)
+        self.assertEqual(pane_plan(["a", "b", "c"]), ["a"] * 3 + ["b"] * 3 + ["c"] * 3)
+        for bad in ([], ["a", "b", "c", "d"]):
+            with self.assertRaises(ValueError):
+                pane_plan(bad)
+
+    def test_even_sizes_fill_the_width_including_dividers(self):
+        for total in (60, 61, 62, 200, 237):
+            for n in (1, 2, 3):
+                s = even_sizes(total, n)
+                self.assertEqual(sum(s) + (n - 1), total)
+                self.assertLessEqual(max(s) - min(s), n)  # the remainder lands on the last pane only
 
 
 if __name__ == "__main__":

@@ -2,21 +2,27 @@
 
 Port of [riecodes/cc3x3](https://github.com/riecodes/cc3x3) (Windows Terminal + PowerShell) to macOS and iTerm2.
 
-Open a grid of iTerm2 windows, one per project, each running Claude Code in its own folder.
+Run Claude Code in a grid of iTerm2 panes (`cc 3x3`) or tiled windows (`cc 3x2`, `cc 2x2`).
 
 ```
-cc 3x3                  # fuzzy-pick projects (Tab selects several), one tiled window each
-cc 3x3 jobi studio      # or name them: a folder name under CC_ROOTS, or a path
+cc 3x3 jobi             # splits THIS window into 3 panes, each running Claude in jobi
+cc 3x3 jobi studio      # 6 panes: one row of 3 per folder
+cc 3x3 jobi studio imagegen   # 9 panes, a full 3x3
+cc 3x3                  # same, but fuzzy-pick the 1 to 3 folders (Tab selects several)
 cc                      # tile THIS window; Claude starts here if it is a project, else you pick one
-cc 3x2 | cc 2x2         # 3 columns x 2 rows (default), or the four screen corners
+cc 3x2 | cc 2x2         # one tiled window per project: 3 columns x 2 rows, or the four screen corners
 cc z-2                  # zoom out two steps (base font size); z0 resets, z2 zooms in. Alone, it only zooms.
 cc 3x3 jobi -- --model opus   # everything from the first -flag goes to Claude
 ccgrid [layout]         # re-tile every iTerm window without launching anything
 ```
 
+A folder is a name under `CC_ROOTS` or a path. `cc 3x3` takes 1 to 3 folders; a fourth is refused before anything opens.
+Panes are equal in size and copy this window's profile (so a `cc z-2` zoom carries over). The pane you typed in runs the
+first session itself, so quitting Claude leaves a prompt there. If the tab already has splits, the grid opens in a new tab.
+
 The picker lists every folder with `.git` or `CLAUDE.md` under `CC_ROOTS` (3 levels deep), newest git activity first.
-This window takes the first project and new windows are created for the rest, filled in reading order.
-Windows already open keep their cells; `cc` says how many to close if the grid cannot hold them all.
+For `cc 3x2` and `cc 2x2` this window takes the first project and new windows are created for the rest, filled in reading
+order. Windows already open keep their cells; `cc` says how many to close if the grid cannot hold them all.
 
 ## Setup
 
@@ -65,8 +71,8 @@ AppleScript is not used: iTerm2 marks it deprecated.
 
 ## Files
 
-- `grid.py`: grid math and layout detection, no iTerm dependency (`python -m unittest discover -s tests`).
-- `cc3x3.py`: reads screens and windows, moves windows, writes the zoom profile.
+- `grid.py`: grid math, pane plan and even sizes, no iTerm dependency (`python -m unittest discover -s tests`).
+- `cc3x3.py`: splits panes (`panes`), moves windows, writes the zoom profile.
 - `cc.zsh`: the `cc`, `ccgrid`, `cczoom` functions.
 - `install.sh`: venv and `~/.zshrc` line.
 
