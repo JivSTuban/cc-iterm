@@ -277,6 +277,8 @@ async def cmd_panes(conn, app, args):
     if not own:
         tab = await win.async_create_tab(profile=profile)
     if TOOLBELT:
+        await win.async_activate()   # the menu acts on the key window: make it this one, or it can flip another window's toolbelt
+        await asyncio.sleep(0.3)
         await show_toolbelt(conn)  # before the splits, because it narrows the window
     rows = [[tab.current_session if not own else session]]
     for _ in args.open[1:]:
