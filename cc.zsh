@@ -7,6 +7,7 @@
 #   cc 3x3                 same, but pick the 1 to 3 folders in a fuzzy list (Tab selects several)
 #   cc                     tile THIS window; Claude starts here if this is a project, else you pick one
 #   cc 3x2 | 2x2           one tiled window per project instead of panes;  cc z-2 | z0 | z2  sets the font zoom (alone: only zooms)
+#   cc z-2 3x3 jobi        same with the font 2 steps smaller (z0 = base size, z2 = bigger); alone, `cc z-2` zooms the whole pane grid
 #   cc 3x3 jobi -- --model opus     anything from the first -flag on goes to Claude
 #
 # Note: this shadows /usr/bin/cc (the C compiler) in interactive shells only. Scripts and make
@@ -81,7 +82,7 @@ cc() {
 
   local cmdline="$CC_LAUNCH ${(j: :)${(q-)a[@]}}"
   if (( panes )); then
-    _cc3x3 panes --cmd-line "$cmdline" --open "${dirs[@]}"
+    _cc3x3 panes "${opts[@]}" --cmd-line "$cmdline" --open "${dirs[@]}"
     case $? in
       0) cd "${dirs[1]}" && eval "$cmdline"; return ;;   # this pane is the first session
       5) return 0 ;;                                      # grid went into a new tab, this shell stays idle

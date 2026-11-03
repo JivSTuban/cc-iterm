@@ -11,7 +11,8 @@ cc 3x3 jobi studio imagegen   # 9 panes, a full 3x3
 cc 3x3                  # same, but fuzzy-pick the 1 to 3 folders (Tab selects several)
 cc                      # tile THIS window; Claude starts here if it is a project, else you pick one
 cc 3x2 | cc 2x2         # one tiled window per project: 3 columns x 2 rows, or the four screen corners
-cc z-2                  # zoom out two steps (base font size); z0 resets, z2 zooms in. Alone, it only zooms.
+cc z-2                  # zoom out two steps (base font size 10 on a laptop, so 8); z0 = 10, z2 = bigger. Alone, it zooms every pane in this tab.
+cc z-2 3x3 jobi studio  # zoom and open the pane grid in one go
 cc 3x3 jobi -- --model opus   # everything from the first -flag goes to Claude
 ccgrid [layout]         # re-tile every iTerm window without launching anything
 ```

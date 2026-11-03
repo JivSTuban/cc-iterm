@@ -4,7 +4,7 @@
   cc3x3.py cc   [--layout 3x3|3x2|2x2] [--zoom N] [--open DIR...] [--cmd-line CMD]
                                                      tile this window (after re-tiling the rest if --layout);
                                                      --open also creates one window per extra DIR running CMD there
-  cc3x3.py panes --open DIR... [--cmd-line CMD]      split THIS window into 3 panes per DIR (1 to 3 DIRs), running CMD in each
+  cc3x3.py panes --open DIR... [--zoom N] [--cmd-line CMD]      split THIS window into 3 panes per DIR (1 to 3 DIRs), running CMD in each
   cc3x3.py grid [LAYOUT]                             re-tile every window on this screen
   cc3x3.py zoom N                                    set the base font size to machine default + N
 
@@ -128,7 +128,7 @@ def is_laptop():
     return "InternalBattery" in subprocess.run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout
 
 
-async def apply_zoom(conn, session, delta):
+async def apply_zoom(conn, session, delta, sessions=None):
     """Write the cc3x3 dynamic profile (your default profile with only the font size changed), switch
     this session to it. New cc windows pick it up in `cc`; windows you never ran cc in are untouched."""
     laptop = is_laptop()
@@ -150,7 +150,8 @@ async def apply_zoom(conn, session, delta):
     if not profile:
         print("cc: iTerm did not load the cc3x3 profile in time", file=sys.stderr)
         return False
-    await session.async_set_profile(profile)
+    for sess in sessions or [session]:  # a pane grid zooms together or the rows stop lining up
+        await sess.async_set_profile(profile)
     print(f"cc zoom: font size {size:g} (default {base:g}, {'laptop' if laptop else 'desktop'})")
     return True
 
@@ -277,7 +278,11 @@ async def cmd_panes(conn, app, args):
     except ValueError as e:
         print(f"cc: {e}", file=sys.stderr)
         return 3
-    await adopt_profile(conn, session)  # keep a zoom set earlier
+    if args.zoom is not None:
+        if not await apply_zoom(conn, session, args.zoom):
+            return 2
+    else:
+        await adopt_profile(conn, session)  # keep a zoom set earlier
     profile = (await session.async_get_profile()).name  # panes copy this window's profile, not the default
     # A tab that already has splits keeps them: the grid goes in a new tab and this shell stays idle.
     own = len(tab.sessions) == 1
@@ -329,11 +334,11 @@ async def cmd_grid(conn, app, args):
 
 
 async def cmd_zoom(conn, app, args):
-    _, session = await find_self(app)
+    _, tab, session = await find_self_tab(app)
     if not session:
         print("cc: run this inside an iTerm2 window", file=sys.stderr)
         return 2
-    return 0 if await apply_zoom(conn, session, args.delta) else 2
+    return 0 if await apply_zoom(conn, session, args.delta, tab.sessions) else 2
 
 
 def main():
@@ -347,6 +352,7 @@ def main():
     c.add_argument("--cmd-line", default="claude", help="shell command to run in each new window")
     p = sub.add_parser("panes")
     p.add_argument("--open", nargs="+", required=True, metavar="DIR", help="1 to 3 project folders, one row of 3 panes each")
+    p.add_argument("--zoom", type=int)
     p.add_argument("--cmd-line", default="claude", help="shell command to run in each pane")
     g = sub.add_parser("grid")
     g.add_argument("layout", nargs="?", choices=LAYOUTS)
