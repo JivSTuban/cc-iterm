@@ -51,7 +51,7 @@ ccgrid [layout]             # re-tile every iTerm window without launching anyth
 - The toolbelt (Profiles and Session Status) is switched on if it is off. It is never switched off.
 - Three sessions in one folder share one working tree. Give them different tasks, or use git worktrees.
 
-The picker lists every folder with `.git` or `CLAUDE.md` under `CC_ROOTS` (3 levels deep), newest git activity first.
+The picker lists every folder with `.git` or `CLAUDE.md` under `CC_ROOTS` (3 levels deep), newest git activity first. Naming a folder outright (`cc farfolio AutoApply-source`) works for any folder directly under a root, marker or not, in any letter case, from any directory; the marker only decides what the picker shows.
 
 ## Manual setup
 

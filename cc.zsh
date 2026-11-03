@@ -37,9 +37,16 @@ _cc3x3_projects() {
 }
 
 # Turns a name or path into an absolute project folder; prints nothing when there is no match.
+# The .git/CLAUDE.md marker only decides what the picker lists. A folder you name outright under a root
+# always works (a workspace like ~/Desktop/AutoApply-source has its repos one level down, no marker of its own).
 _cc3x3_resolve() {
   [[ -d $1 ]] && { print -r -- ${1:A}; return }
   local p; for p in ${(f)"$(_cc3x3_projects)"}; do [[ ${p:t} == $1 ]] && { print -r -- $p; return }; done
+  [[ $1 == */* ]] && return
+  # (#i) so "Autoapply-source" finds "AutoApply-source" and returns the on-disk spelling: Claude keys its
+  # per-project memory by path, and a different case would split one project into two.
+  setopt localoptions extendedglob
+  local -a hit; for p in "${CC_ROOTS[@]}"; do hit=( ${p:A}/(#i)${1}(N/) ); (( $#hit )) && { print -r -- $hit[1]; return }; done
 }
 
 cc() {
