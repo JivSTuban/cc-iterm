@@ -75,7 +75,7 @@ PANE_MAX_FOLDERS = 3
 
 
 def pane_plan(dirs):
-    """`cc 3x3` pane mode: every folder gets one row of PANE_COLS sessions, so 1 folder is 3 panes,
+    """`cc <folders>` pane mode: every folder gets one row of PANE_COLS sessions, so 1 folder is 3 panes,
     2 folders 6, 3 folders 9. Returns one folder per pane in reading order (row by row)."""
     if not 1 <= len(dirs) <= PANE_MAX_FOLDERS:
         raise ValueError(f"need 1 to {PANE_MAX_FOLDERS} folders, got {len(dirs)}")

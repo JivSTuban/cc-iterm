@@ -36,7 +36,7 @@ FONT = {"laptop": float(os.environ.get("CC_FONT_LAPTOP", "10")),
         "desktop": float(os.environ.get("CC_FONT_DESKTOP", "12"))}
 # ----------------------------------------------------------------------------------------------------
 
-# `cc 3x3` turns on View > Show Toolbelt (your Profiles and Session Status panels) when it is off, so every
+# `cc` turns on View > Show Toolbelt (your Profiles and Session Status panels) when it is off, so every
 # Claude pane's state is visible. Set CC_TOOLBELT=0 to leave the window alone. It never turns the toolbelt off.
 TOOLBELT = os.environ.get("CC_TOOLBELT", "1") != "0"
 
@@ -268,7 +268,7 @@ async def show_toolbelt(conn):
 
 
 async def cmd_panes(conn, app, args):
-    """`cc 3x3`: split THIS window into panes. One row of 3 sessions per folder, all running CMD there."""
+    """`cc <folders>`: split THIS window into panes. One row of 3 sessions per folder, all running CMD there."""
     win, tab, session = await find_self_tab(app)
     if not win:
         print("cc: run this inside an iTerm2 window", file=sys.stderr)

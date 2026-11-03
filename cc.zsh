@@ -1,14 +1,15 @@
-# cc3x3 for iTerm2: open a grid of iTerm windows, one per project, and launch Claude Code in each.
+# cc3x3 for iTerm2: split this iTerm window into a grid of Claude Code sessions, 3 per project folder.
 #
 # Source this from ~/.zshrc (install.sh does it):  source "/path/to/cc3x3-iterm/cc.zsh"
 #
-#   cc 3x3 jobi            splits THIS window into 3 panes running Claude in jobi (one folder: 3 panes)
-#   cc 3x3 jobi studio     6 panes: a row of 3 per folder; a third folder makes the full 3x3 (9 panes)
-#   cc 3x3                 same, but pick the 1 to 3 folders in a fuzzy list (Tab selects several)
-#   cc                     tile THIS window; Claude starts here if this is a project, else you pick one
-#   cc 3x2 | 2x2           one tiled window per project instead of panes;  cc z-2 | z0 | z2  sets the font zoom (alone: only zooms)
-#   cc z-2 3x3 jobi        same with the font 2 steps smaller (z0 = base size, z2 = bigger); alone, `cc z-2` zooms the whole pane grid
-#   cc 3x3 jobi -- --model opus     anything from the first -flag on goes to Claude
+#   cc jobi                    3 panes running Claude in jobi
+#   cc jobi upskill            6 panes: a row of 3 per folder
+#   cc jobi upskill farfolio 9 panes, a full 3x3
+#   cc                         same, but pick the 1 to 3 folders in a fuzzy list (Tab selects several)
+#   cc jobi upskill --dangerously-skip-permissions --model opus
+#                              folders first; everything from the first -flag on goes to every Claude
+#   cc z-2 jobi                same with the font 2 steps smaller (z0 = base size, z2 = bigger); alone, `cc z-2` zooms the whole pane grid
+#   cc 3x2 jobi studio | 2x2   tiled iTerm windows (one per project) instead of panes
 #
 # Note: this shadows /usr/bin/cc (the C compiler) in interactive shells only. Scripts and make
 # are not affected. Use `command cc` or /usr/bin/cc to reach the compiler.
@@ -43,16 +44,14 @@ _cc3x3_resolve() {
 
 cc() {
   local -a a=("$@") opts=() dirs=() pick
-  local layout="" limit=9 sel panes=0
+  local layout="" limit=3 sel panes=1
 
   if [[ ${a[1]} =~ '^z(-?[0-9]+)$' ]]; then
     local z=${match[1]}; opts+=(--zoom $z); a=("${(@)a[2,-1]}")
     (( $#a )) || { _cc3x3 zoom $z; return }
   fi
-  if [[ ${a[1]} == 3x3 ]]; then
-    panes=1; limit=3; a=("${(@)a[2,-1]}")   # 3x3 = panes in THIS window, one row of 3 per folder
-  elif [[ ${a[1]} == (3x2|2x2) ]]; then
-    layout=${a[1]}; opts+=(--layout $layout); a=("${(@)a[2,-1]}")
+  if [[ ${a[1]} == (3x2|2x2) ]]; then   # one tiled window per project instead of panes
+    panes=0; layout=${a[1]}; opts+=(--layout $layout); a=("${(@)a[2,-1]}")
     limit=$(( ${layout[1]} * ${layout[3]} ))
   fi
 
@@ -63,21 +62,16 @@ cc() {
     dirs+=($sel); a=("${(@)a[2,-1]}")
   done
   [[ ${a[1]} == -- ]] && a=("${(@)a[2,-1]}")
-  (( panes && $#dirs > 3 )) && { print -u2 "cc: 3x3 takes 1 to 3 folders (3 sessions each), got $#dirs"; return 1 }
+  (( panes && $#dirs > 3 )) && { print -u2 "cc: 1 to 3 folders (3 sessions each), got $#dirs"; return 1 }
 
   if (( ! $#dirs )); then
-    if [[ -z $layout ]] && (( ! panes )) && { git rev-parse --show-toplevel >/dev/null 2>&1 || [[ -f CLAUDE.md ]] }; then
-      dirs=($PWD)   # a bare `cc` inside a project: tile and launch right here
-    else
-      command -v fzf >/dev/null || { print -u2 "cc: the project picker needs fzf: brew install fzf"; return 1 }
-      local hdr=""; [[ -n $layout ]] && hdr="Tab selects up to $limit, "; (( panes )) && hdr="Tab selects up to 3 folders, 3 sessions each. "
-      local multi="--multi=$limit"; [[ -z $layout ]] && (( ! panes )) && multi="--no-multi"
-      pick=$(_cc3x3_projects | sed "s|^$HOME|~|" |
-             fzf $multi --height=50% --reverse --prompt='project > ' \
-                 --header="${hdr}Enter opens, Esc cancels") || return 1
-      for sel in ${(f)pick}; do dirs+=(${sel/#\~/$HOME}); done
-      (( $#dirs )) || return 1
-    fi
+    command -v fzf >/dev/null || { print -u2 "cc: the project picker needs fzf: brew install fzf"; return 1 }
+    local hdr="Tab selects up to $limit, "; (( panes )) && hdr="Tab selects up to 3 folders, 3 sessions each. "
+    pick=$(_cc3x3_projects | sed "s|^$HOME|~|" |
+           fzf --multi=$limit --height=50% --reverse --prompt='project > ' \
+               --header="${hdr}Enter opens, Esc cancels") || return 1
+    for sel in ${(f)pick}; do dirs+=(${sel/#\~/$HOME}); done
+    (( $#dirs )) || return 1
   fi
 
   local cmdline="$CC_LAUNCH ${(j: :)${(q-)a[@]}}"

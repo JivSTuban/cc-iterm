@@ -6,10 +6,11 @@ The iTerm toolbelt lists every session and whether it is working or idle.
 ![A 3x3 grid of Claude Code sessions in one iTerm2 window, with Session Status in the toolbelt](docs/3x3.png)
 
 ```sh
-cc 3x3 api web docs      # 9 sessions: a row of 3 in each folder
-cc 3x3 api web           # 6 sessions
-cc 3x3 api               # 3 sessions in one folder
-cc 3x3                   # no names: pick 1 to 3 folders in a fuzzy list
+cc api web docs          # 9 sessions: a row of 3 in each folder
+cc api web               # 6 sessions
+cc api                   # 3 sessions in one folder
+cc                       # no names: pick 1 to 3 folders in a fuzzy list
+cc api web docs --dangerously-skip-permissions   # any Claude Code flag goes to every session
 ```
 
 macOS and iTerm2 only. Terminal.app cannot split panes from a script, so it is not supported.
@@ -19,14 +20,14 @@ macOS and iTerm2 only. Terminal.app cannot split panes from a script, so it is n
 Open Claude Code in any folder and paste this. It installs everything and tells you the one setting it cannot click for you.
 
 ```text
-Set up cc3x3-iterm on this Mac so that typing `cc 3x3 <folder> <folder> <folder>` in iTerm2 opens a 3x3 grid of Claude Code sessions.
+Set up cc3x3-iterm on this Mac so that typing `cc <folder> <folder> <folder>` in iTerm2 opens a 3x3 grid of Claude Code sessions.
 
 1. Check this is macOS and that /Applications/iTerm.app exists. If iTerm2 is missing, tell me to run `brew install --cask iterm2`, then stop.
 2. Clone https://github.com/JivSTuban/cc3x3-iterm into ~/cc3x3-iterm. If the folder already exists, run `git pull` in it instead.
 3. Run `sh ~/cc3x3-iterm/install.sh`. It creates a Python venv (3.10 or newer), installs fzf, and adds one `source` line to ~/.zshrc.
 4. Run `defaults read com.googlecode.iterm2 EnableAPIServer`. If it does not print 1, tell me to open iTerm2 > Settings > General > Magic, tick "Enable Python API", and restart iTerm2.
 5. Run `~/cc3x3-iterm/.venv/bin/python -m unittest discover -s ~/cc3x3-iterm/tests` and show me the result.
-6. Tell me to open a NEW iTerm2 window and run `cc 3x3 <one of my project folders>`. Do not run it from this session.
+6. Tell me to open a NEW iTerm2 window and run `cc <one of my project folders>`. Do not run it from this session.
 
 Show each command before you run it. Stop at the first error and show me the exact output. Do not change anything except ~/cc3x3-iterm and the one line in ~/.zshrc.
 ```
@@ -34,16 +35,16 @@ Show each command before you run it. Stop at the first error and show me the exa
 ## Use it
 
 ```
-cc 3x3 api web docs         # folder names under CC_ROOTS, or paths
-cc z-2 3x3 api web docs     # same, with the font two steps smaller
+cc api web docs             # folder names under CC_ROOTS, or paths (cc . for this folder)
+cc z-2 api web docs         # same, with the font two steps smaller
 cc z-2 | cc z0 | cc z2      # alone: zoom every pane in this tab (base size is 10 on a laptop, 12 on a desktop)
-cc 3x3 api -- --model opus  # everything from the first -flag goes to Claude
+cc api web --model opus --continue   # folders first; from the first -flag on, it all goes to Claude
 cc 3x2 api web | cc 2x2 ... # tiled windows instead of panes: 3 columns x 2 rows, or the four screen corners
-cc                          # tile THIS window; Claude starts here if it is a project, else you pick one
+cc                          # no folders: pick 1 to 3 in a fuzzy list
 ccgrid [layout]             # re-tile every iTerm window without launching anything
 ```
 
-- `cc 3x3` takes 1 to 3 folders. A fourth is refused before anything opens.
+- `cc` takes 1 to 3 folders, then any Claude Code flags (`--dangerously-skip-permissions`, `--model`, `--permission-mode`, `--continue`, ...). A fourth is refused before anything opens.
 - The pane you typed in runs the first session itself, so quitting Claude leaves a prompt there.
 - If the tab already has splits, the grid opens in a new tab.
 - Panes are equal in size and copy this window's profile, so a zoom carries over.
@@ -61,7 +62,7 @@ git clone https://github.com/JivSTuban/cc3x3-iterm ~/cc3x3-iterm && sh ~/cc3x3-i
 Needs iTerm2 3.x with **Settings > General > Magic > Enable Python API** on, Python 3.10+ (the installer finds or installs
 one), `fzf` (the installer runs `brew install fzf`), and `claude` on `PATH`.
 The installer makes a venv with the `iterm2` package and adds one `source` line to `~/.zshrc`.
-Open a new iTerm2 window and type `cc 3x3 <folder>`.
+Open a new iTerm2 window and type `cc <folder>`.
 
 `cc` shadows `/usr/bin/cc` (the C compiler) in interactive shells only. `make` and scripts are unaffected;
 reach the compiler with `command cc`.
@@ -72,7 +73,7 @@ Set in `~/.zshrc` before the `source` line.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `CC_TOOLBELT` | `1` | `cc 3x3` shows the iTerm toolbelt (Profiles, Session Status) if it is hidden, so you see each Claude pane's state. `0` leaves it alone. |
+| `CC_TOOLBELT` | `1` | `cc` shows the iTerm toolbelt (Profiles, Session Status) if it is hidden, so you see each Claude pane's state. `0` leaves it alone. |
 | `CC_ROOTS` | `(~/Desktop)` | Folders searched for projects. A zsh array: `CC_ROOTS=(~/Desktop ~/work)`. |
 | `CC_LAUNCH` | `claude` | Command each pane runs. Use `claude --dangerously-skip-permissions` for unattended agents. |
 | `CC_WIDTH3` | `0.92` | Fraction of the screen the tiled-window layouts (`cc 3x2`) span; the rest is side strips for a browser. 2x2 always uses the full width. |
@@ -94,7 +95,7 @@ Port of [riecodes/cc3x3](https://github.com/riecodes/cc3x3) (Windows Terminal + 
 
 | | Windows | iTerm2 |
 | --- | --- | --- |
-| Grid | Moves terminal windows into cells | `cc 3x3` splits panes in one window; `cc 3x2` and `cc 2x2` still tile windows |
+| Grid | Moves terminal windows into cells | `cc` splits panes in one window; `cc 3x2` and `cc 2x2` still tile windows |
 | Moving windows | C# `SetWindowPos` compiled on first use | iTerm2 Python API `Window.async_set_frame` |
 | Screen area | Win32 monitor work area | `NSScreen.visibleFrame` (menu bar and Dock excluded), per screen |
 | 2x2 | Drives the Snap Layouts menu over UI Automation (3 s, steals focus) | Plain moves, same as 3x2 |

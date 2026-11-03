@@ -33,4 +33,4 @@ fi
 
 [ "$(defaults read com.googlecode.iterm2 EnableAPIServer 2>/dev/null)" = "1" ] ||
   echo "Enable iTerm2 > Settings > General > Magic > Enable Python API, then restart iTerm2."
-echo "Open a new iTerm2 window and type: cc 3x3 <project folder>"
+echo "Open a new iTerm2 window and type: cc <project folder>"
